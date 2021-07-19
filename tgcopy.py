@@ -19,19 +19,6 @@ try: #If the user calls the script with at least 1 paramater (e.g. at least 3 wo
         microtimingOffset = 0.0
 except IndexError: #If the user only types "python tgcopy.py"...  
     sys.exit("Usage: python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]")
-    
-    '''
-    print("╔══════════════════════════════════════════════════════════════════════════════════╗")
-    print("║            This script allows you to copy a section of a TextGrid file           ║")
-    print("║                     from one place in the TextGrid to another.                   ║")
-    print("║                   The script will not overwrite your TextGrid,                   ║")
-    print("║        it will just make a copy of the TextGrid file in the same folder.         ║")
-    print("╚══════════════════════════════════════════════════════════════════════════════════╝")
-    filename = input("               .TextGrid file: ")
-    startCopy = input("Start time of section to copy: ")
-    endCopy = input("  End time of section to copy: ")
-    paste = input("             Time to paste to: ")
-    '''
 
 with open(filename) as f: #Open the file into a list of strings, called "lines". Each line is one string.
     lines = [line.rstrip() for line in f]
@@ -123,6 +110,15 @@ for tier in tiers:
         interval.xmin = interval.xmin+timeDifference
         interval.xmax = interval.xmax+timeDifference
     
+    #Check to make sure microtiming offset isn't too large.
+        #If it is, it will push the first pasted boundary too far to the left. 
+        #If the first interval of the pasted data overlaps the interval before it, Praat will refuse to open the .TextGrid file, so we need to prevent that from happening.
+    if(curTier == 8 and tempIntervals[0].xmin < editedTiers[curTier][insertAt-2].xmin):
+        print("ERROR:")
+        print("  Microtiming offset number too high. Please use a smaller value.")
+        sys.exit()
+        
+    
     i = 0
     while(i < len(editedTiers[curTier])): #Weirdly, if you just use a normal index such as editedTiers[curTier][0], it gives an "index out of range" error. So we need to do this weird workaround where we put it in a loop to make it work.
         if(i == startPasteInterval.number):
@@ -138,8 +134,9 @@ for tier in tiers:
             editedTiers[curTier].remove(editedTiers[curTier][startPasteInterval.number-1])
         i += 1
     
-    tempIntervals.reverse() #For some reason, tempIntervals is backwards. So we need to just reverse it.
-    for interval in tempIntervals: #Copy temporary list data to paste area
+    #Copy temporary list data to paste area
+    tempIntervals.reverse() #In Python, the list.insert method inserts stuff backwards, so we need to reverse our list first, so everything is the right way around.
+    for interval in tempIntervals: 
         editedTiers[curTier].insert(insertAt-1, interval) 
         
     curTier += 1
@@ -147,6 +144,7 @@ for tier in tiers:
 
 
 tiers = editedTiers #Overwrite tiers list with editedTiers list. We don't have to do this, but it makes the following code a little more readable, since we just have to write tiers[?] instead of editedTiers[?].
+
 ### Routine for turning interval data back into TextGrid format and writing to a .TextGrid file ##
 createNew = open("Copied_"+filename, "a") #Create a Copied_[filename].TextGrid file, just in case it doesn't exist already.
 createNew.close()
@@ -184,5 +182,3 @@ with open("Copied_"+filename, 'r+') as f2:
                 j += 1
         i += 1
     f2.close()
-
-
