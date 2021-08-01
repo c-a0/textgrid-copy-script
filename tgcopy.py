@@ -1,6 +1,6 @@
 #Script to copy a section of a TextGrid from one place in the TextGrid to another
 #C.A. 2021
-#Last updated 7/19/21
+#Last updated 7/31/21
 #   Use:
 #         python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]
 
@@ -65,6 +65,12 @@ for line in lines:
 
     i += 1
     
+#Find total length of TextGrid, for use in sanity-checking and printing later
+totalLength = 0
+for inter in tiers[2]:
+    totalLength += inter.length
+
+    
 ### Routine for copying data from one part of a TextGrid to another ###
 editedTiers = copy.deepcopy(tiers)
 
@@ -93,12 +99,16 @@ for tier in tiers:
             endPasteInterval = copy.deepcopy(tier[i]) 
         i += 1
         
+   
     
     i = 0
     while(i < len(tier)): #Copy interval data into temporary list
-        if(tiers[curTier][i].xmin >= startCopyInterval.xmin and tiers[curTier][i].xmin < endCopyInterval.xmin): #Doesn't work for microtiming tier
-            tempIntervals.append(copy.deepcopy(tiers[curTier][i])) 
+        if(tiers[curTier][i].xmin >= startCopyInterval.xmin and tiers[curTier][i].xmin < endCopyInterval.xmax): #Doesn't work for microtiming tier
+            tempIntervals.append(copy.deepcopy(tiers[curTier][i]))
+            
         i += 1 
+    
+    
     
     #The timeDifference needs to be the same for tiers 6, 7, and 8, otherwise the microtiming tier will be misaligned. 6 and 7 are usually aligned, but 8 (the microtiming layer) isn't, so we have to do it manually.
     if(curTier == 6): #...So we copy the value from 6 into a separate variable (setTimeDifference)...
@@ -106,17 +116,17 @@ for tier in tiers:
     if(curTier == 8): #...And use that variable for tier 8!
         timeDifference = setTimeDifference
     
-    for interval in tempIntervals: #Add time offset to temporary list data
-        interval.xmin = interval.xmin+timeDifference
-        interval.xmax = interval.xmax+timeDifference
+    for inter in tempIntervals: #Add time offset to temporary list data
+        inter.xmin = inter.xmin+timeDifference
+        inter.xmax = inter.xmax+timeDifference
     
     #Check to make sure microtiming offset isn't too large.
         #If it is, it will push the first pasted boundary too far to the left. 
         #If the first interval of the pasted data overlaps the interval before it, Praat will refuse to open the .TextGrid file, so we need to prevent that from happening.
-    if(curTier == 8 and tempIntervals[0].xmin < editedTiers[curTier][insertAt-2].xmin):
-        print("ERROR:")
-        print("  Microtiming offset number too high. Please use a smaller value.")
-        sys.exit()
+    #if(curTier == 8 and tempIntervals[0].xmin < editedTiers[curTier][insertAt-2].xmin):
+    #    print("ERROR:")
+    #    print("  Microtiming offset number too high. Please use a smaller value.")
+    #    sys.exit()
         
     
     i = 0
@@ -130,14 +140,28 @@ for tier in tiers:
     
     i = 0
     while(i < len(tier)): #Clear paste area
-        if(tiers[curTier][i].xmin >= startPasteInterval.xmin and tiers[curTier][i].xmin < endPasteInterval.xmin):
+        if(tiers[curTier][i].xmin-0.000001 >= startPasteInterval.xmin and tiers[curTier][i].xmin < endPasteInterval.xmin):
             editedTiers[curTier].remove(editedTiers[curTier][startPasteInterval.number-1])
         i += 1
     
     #Copy temporary list data to paste area
-    tempIntervals.reverse() #In Python, the list.insert method inserts stuff backwards, so we need to reverse our list first, so everything is the right way around.
-    for interval in tempIntervals: 
-        editedTiers[curTier].insert(insertAt-1, interval) 
+    #tempIntervals.reverse() #Because of the way I did insertAt-1, the list will be inserted backwards, so we need to reverse our list first, so everything is the right way around.
+    for inter in tempIntervals: 
+        editedTiers[curTier].insert(insertAt-1, inter) 
+    
+    #Check if last interval in current tier's xmax is the same as the TextGrid length. If it's not, add one more blank interval to the end fill out the rest of the tier.
+    #This is a really bad way to do this, but it works. 
+    i = 0 
+    check = 999 #This variable will just be used to check if editedTiers[curTier][i] will throw an index error, so we'll know we're at the end of the list.
+    for inter in editedTiers[curTier]: #Loop trhough current tier
+        i += 1
+        try: #Check if we're at the end of the list
+            check = editedTiers[curTier][i].number
+        except IndexError: #If we're at the end of the list
+            if(inter.xmax != totalLength): #If the last interval's xmax doesn't extend all the way to the end of the text grid...
+                editedTiers[curTier].insert(i, interval(i, inter.xmax, totalLength, "")) #...add one final blank interval to complete the gap
+    
+    
         
     curTier += 1
     
@@ -154,9 +178,6 @@ with open("Copied_"+filename, 'r+') as f2:
     f2.write("Object class = \"TextGrid\"\n")
     f2.write("\n")
     f2.write("xmin = 0 \n")
-    totalLength = 0
-    for interval in tiers[2]:
-        totalLength += interval.length
     f2.write("xmax = "+str(totalLength)+" \n")
     f2.write("tiers? <exists> \n")
     f2.write("size = "+str(len(tiers)-2)+" \n")
@@ -174,11 +195,13 @@ with open("Copied_"+filename, 'r+') as f2:
             for interval in tier:
                 f2.write("        intervals ["+str(j)+"]:\n")
                 f2.write("            xmin = "+str(interval.xmin)+" \n")
-                try:
-                    f2.write("            xmax = "+str(tier[j].xmin)+" \n") #xmax = next interval's xmin. Just a sanity check to make sure the timings make sense.
-                except IndexError:
-                    f2.write("            xmax = "+str(interval.xmax)+" \n")
+                f2.write("            xmax = "+str(interval.xmax)+" \n")
+                #try:
+                #    f2.write("            xmax = "+str(tier[j].xmin)+" \n") #xmax = next interval's xmin. Just a sanity check to make sure the timings make sense.
+                #except IndexError:
+                #    f2.write("            xmax = "+str(interval.xmax)+" \n")
                 f2.write("            text = \""+interval.text+"\" \n")
                 j += 1
         i += 1
     f2.close()
+    
