@@ -7,6 +7,7 @@
 import sys
 import re
 import copy
+import codecs
 
 try: #If the user calls the script with at least 1 paramater (e.g. at least 3 words typed in the command line)...
     filename = sys.argv[1]
@@ -20,9 +21,16 @@ try: #If the user calls the script with at least 1 paramater (e.g. at least 3 wo
 except IndexError: #If the user only types "python tgcopy.py"...  
     sys.exit("Usage: python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]")
 
-with open(filename) as f: #Open the file into a list of strings, called "lines". Each line is one string.
+try: #Most of the .TextGrides files are encoded in ASCII, but if they use special characters they are in Unicode. If they are in Unicode, we have to convert them first.
+    f = codecs.open(filename, 'r', 'utf-16')
+    lines = [line.rstrip() for line in f]
+except UnicodeError: #If the file is in ASCII and we try to read it as Unicode, it won't work, so we catch this error.
+    f = open(filename, 'r')   
     lines = [line.rstrip() for line in f]
 f.close()
+
+for line in lines:
+    print(line)
 
 #Define a new data type, "interval"                                                             int     float   float   string
 class interval: #a variable of this type can be created like this: [variable name] = interval([number], [xmin], [xmax], [text])
