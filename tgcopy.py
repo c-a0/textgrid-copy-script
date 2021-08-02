@@ -1,6 +1,6 @@
 #Script to copy a section of a TextGrid from one place in the TextGrid to another
 #C.A. 2021
-#Last updated 7/31/21
+#Last updated 8/02/21
 #   Use:
 #         python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]
 
@@ -10,9 +10,9 @@ import copy
 
 try: #If the user calls the script with at least 1 paramater (e.g. at least 3 words typed in the command line)...
     filename = sys.argv[1]
-    startCopy = float(sys.argv[2])
-    endCopy = float(sys.argv[3])
-    paste = float(sys.argv[4])
+    startCopy = float(sys.argv[2])-0.000001 #Correct for Praat's rounding of TextGrid times.
+    endCopy = float(sys.argv[3])-0.000001
+    paste = float(sys.argv[4])-0.000001
     try: #If user provides an offset for layer 8, use it.
         microtimingOffset = float(sys.argv[5])
     except IndexError:
@@ -109,7 +109,6 @@ for tier in tiers:
         i += 1 
     
     
-    
     #The timeDifference needs to be the same for tiers 6, 7, and 8, otherwise the microtiming tier will be misaligned. 6 and 7 are usually aligned, but 8 (the microtiming layer) isn't, so we have to do it manually.
     if(curTier == 6): #...So we copy the value from 6 into a separate variable (setTimeDifference)...
         setTimeDifference = copy.deepcopy(timeDifference)-microtimingOffset
@@ -120,9 +119,11 @@ for tier in tiers:
         inter.xmin = inter.xmin+timeDifference
         inter.xmax = inter.xmax+timeDifference
     
-    #Check to make sure microtiming offset isn't too large.
+    
+        #Check to make sure microtiming offset isn't too large. 
         #If it is, it will push the first pasted boundary too far to the left. 
         #If the first interval of the pasted data overlaps the interval before it, Praat will refuse to open the .TextGrid file, so we need to prevent that from happening.
+    #If Praat has trouble reading the file, try uncommenting this code:
     #if(curTier == 8 and tempIntervals[0].xmin < editedTiers[curTier][insertAt-2].xmin):
     #    print("ERROR:")
     #    print("  Microtiming offset number too high. Please use a smaller value.")
@@ -140,7 +141,7 @@ for tier in tiers:
     
     i = 0
     while(i < len(tier)): #Clear paste area
-        if(tiers[curTier][i].xmin-0.000001 >= startPasteInterval.xmin and tiers[curTier][i].xmin < endPasteInterval.xmin):
+        if(tiers[curTier][i].xmin >= startPasteInterval.xmin and tiers[curTier][i].xmin < endPasteInterval.xmin):
             editedTiers[curTier].remove(editedTiers[curTier][startPasteInterval.number-1])
         i += 1
     
@@ -150,14 +151,10 @@ for tier in tiers:
         editedTiers[curTier].insert(insertAt-1, inter) 
     
     #Check if last interval in current tier's xmax is the same as the TextGrid length. If it's not, add one more blank interval to the end fill out the rest of the tier.
-    #This is a really bad way to do this, but it works. 
     i = 0 
-    check = 999 #This variable will just be used to check if editedTiers[curTier][i] will throw an index error, so we'll know we're at the end of the list.
     for inter in editedTiers[curTier]: #Loop trhough current tier
         i += 1
-        try: #Check if we're at the end of the list
-            check = editedTiers[curTier][i].number
-        except IndexError: #If we're at the end of the list
+        if(i == len(editedTiers[curTier])): #Check if we're at the end of the list
             if(inter.xmax != totalLength): #If the last interval's xmax doesn't extend all the way to the end of the text grid...
                 editedTiers[curTier].insert(i, interval(i, inter.xmax, totalLength, "")) #...add one final blank interval to complete the gap
     
