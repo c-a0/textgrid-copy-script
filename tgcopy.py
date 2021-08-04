@@ -1,6 +1,6 @@
 #Script to copy a section of a TextGrid from one place in the TextGrid to another
 #C.A. 2021
-#Last updated 8/03/21
+#Last updated 8/04/21
 #   Use:
 #         python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]
 
@@ -146,12 +146,12 @@ for tier in tiers:
     
     i = 0
     while(i < len(tier)): #Clear paste area
-        if(tiers[curTier][i].xmin >= startPasteInterval.xmin and tiers[curTier][i].xmin < endPasteInterval.xmin):
+        if(tiers[curTier][i].xmin >= startPasteInterval.xmin and tiers[curTier][i].xmin <= endPasteInterval.xmin):
             editedTiers[curTier].remove(editedTiers[curTier][startPasteInterval.number-1])
         i += 1
     
     #Copy temporary list data to paste area
-    #tempIntervals.reverse() #Because of the way I did insertAt-1, the list will be inserted backwards, so we need to reverse our list first, so everything is the right way around.
+    tempIntervals.reverse() #Because of the way I did insertAt-1, the list will be inserted backwards, so we need to reverse our list first, so everything is the right way around.
     for inter in tempIntervals: 
         editedTiers[curTier].insert(insertAt-1, inter) 
     
@@ -197,11 +197,11 @@ with open("Copied_"+filename, 'r+') as f2:
             for interval in tier:
                 f2.write("        intervals ["+str(j)+"]:\n")
                 f2.write("            xmin = "+str(interval.xmin)+" \n")
-                f2.write("            xmax = "+str(interval.xmax)+" \n")
-                #try:
-                #    f2.write("            xmax = "+str(tier[j].xmin)+" \n") #xmax = next interval's xmin. Just a sanity check to make sure the timings make sense.
-                #except IndexError:
-                #    f2.write("            xmax = "+str(interval.xmax)+" \n")
+                #f2.write("            xmax = "+str(interval.xmax)+" \n")
+                try:
+                    f2.write("            xmax = "+str(tier[j].xmin)+" \n") #xmax = next interval's xmin. Just a sanity check to make sure the timings make sense.
+                except IndexError:
+                    f2.write("            xmax = "+str(interval.xmax)+" \n")
                 f2.write("            text = \""+interval.text+"\" \n")
                 j += 1
         i += 1
