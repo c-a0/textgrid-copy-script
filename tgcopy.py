@@ -89,6 +89,10 @@ endCopyInterval = copy.deepcopy(tiers[2][0])
 endPasteInterval = copy.deepcopy(tiers[2][0])
 
 for tier in tiers:
+    if(curTier == 10):
+        curTier += 1
+        continue
+    
     tempIntervals = []
     i = 0
     
@@ -144,6 +148,7 @@ for tier in tiers:
                 pass
         i += 1
     
+    
     i = 0
     while(i < len(tier)): #Clear paste area
         if(tiers[curTier][i].xmin >= startPasteInterval.xmin and tiers[curTier][i].xmin <= endPasteInterval.xmin):
@@ -162,7 +167,6 @@ for tier in tiers:
         if(i == len(editedTiers[curTier])): #Check if we're at the end of the list
             if(inter.xmax != totalLength): #If the last interval's xmax doesn't extend all the way to the end of the text grid...
                 editedTiers[curTier].insert(i, interval(i, inter.xmax, totalLength, "")) #...add one final blank interval to complete the gap
-    
     
         
     curTier += 1
