@@ -1,6 +1,6 @@
 #Script to copy a section of a TextGrid from one place in the TextGrid to another
 #C.A. 2021
-#Last updated 8/02/21
+#Last updated 8/03/21
 #   Use:
 #         python tgcopy.py [TextGrid filename] [Start time of section to copy] [End time of section to copy] [Time to paste to] [Optional: Microtiming offset]
 
@@ -28,9 +28,6 @@ except UnicodeError: #If the file is in ASCII and we try to read it as Unicode, 
     f = open(filename, 'r')   
     lines = [line.rstrip() for line in f]
 f.close()
-
-for line in lines:
-    print(line)
 
 #Define a new data type, "interval"                                                             int     float   float   string
 class interval: #a variable of this type can be created like this: [variable name] = interval([number], [xmin], [xmax], [text])
